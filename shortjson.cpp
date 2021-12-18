@@ -64,9 +64,8 @@ namespace shortjson
         if(++pos < end) // iterate THEN check IF at End Of String
           switch (*pos)
           {
-            // hexadecimal encoded
             case 'u': // unicode escape symbol \u???? - value range: 0 to 65535
-            case 'x': // unicode escape symbol \x?? - value range: 0 to 255
+            case 'x': // hexadecimal escape symbol \x?? - value range: 0 to 255
             {
               auto start = ++pos;
               pos += *(pos - 1) == 'x' ? 2 : 4; // 2 for \x, 4 for \u
