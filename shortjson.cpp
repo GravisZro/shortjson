@@ -28,18 +28,6 @@ namespace shortjson
                                          const string_iterator& end)
     { return std::accumulate(pos, end, 0, [](uint32_t t, char x) { return (t * base) + hex_value(x); }); }
 
-  template <typename string_iterator>  // grabs 'num_digits' hexadecimal digits and returns it as a value
-  static uint32_t get_hex_digits(string_iterator& pos,
-                                 const string_iterator& end,
-                                 uint8_t num_digits)
-  {
-    auto start = pos;
-    pos += num_digits;
-    if(pos > end || !std::all_of(start, pos, ::isxdigit)) // all digits are hexadecimal
-      throw JSON_ERROR("End Of String found while decoding UTF-16 OR hexadecimal escape sequence");
-    return reconstitute_number<16>(start, pos--);
-  }
-
   // Convert 16 bit code point to UTF-8 string.
   // see Table 3-6 : http://www.unicode.org/versions/Unicode6.2.0/ch03.pdf#page=42
   static void append_utf16(std::string& dest, uint16_t data) noexcept
@@ -78,12 +66,15 @@ namespace shortjson
           {
             // hexadecimal encoded
             case 'u': // unicode escape symbol \u???? - value range: 0 to 65535
-              append_utf16(value, get_hex_digits(++pos, end, 4)); // read digits
-              break;
-
             case 'x': // unicode escape symbol \x?? - value range: 0 to 255
-              value.push_back(char(get_hex_digits(++pos, end, 2)));
+            {
+              auto start = ++pos;
+              pos += *(pos - 1) == 'x' ? 2 : 4; // 2 for \x, 4 for \u
+              if(pos > end || !std::all_of(start, pos, ::isxdigit)) // IF exceeds End Of String OR NOT all digits are hexadecimal
+                throw JSON_ERROR("End Of String found while decoding UTF-16 OR hexadecimal escape sequence");
+              append_utf16(value, reconstitute_number<16>(start, pos--));
               break;
+            }
 
             // octal sequence
             case '0': case '1': case '2': case '3':
