@@ -23,28 +23,21 @@ namespace shortjson
   constexpr uint8_t hex_value(char x) noexcept
     { return x <= '9' ? x - '0' : (10 + ::tolower(x) - 'a'); }
 
-  template <uint32_t base, typename string_iterator>
+  template <uint32_t base, typename string_iterator> // turns character sequence into a number
   constexpr uint32_t reconstitute_number(string_iterator& pos,
                                          const string_iterator& end)
     { return std::accumulate(pos, end, 0, [](uint32_t t, char x) { return (t * base) + hex_value(x); }); }
 
-  // grabs 'num_digits' hexadecimal digits (stores in 'value') with or without braces ('{' and ']') surrounding them
-  // TODO: clean up this mess (regex?)
-  template <typename string_iterator>
-  static bool get_hex_digits(string_iterator& pos,
-                             const string_iterator& end,
-                             uint8_t num_digits,
-                             uint32_t& value)
+  template <typename string_iterator>  // grabs 'num_digits' hexadecimal digits and returns it as a value
+  static uint32_t get_hex_digits(string_iterator& pos,
+                                 const string_iterator& end,
+                                 uint8_t num_digits)
   {
-    bool braced;
-    string_iterator hex_end;
-    return
-       ++pos < end && // iterate THEN check IF NOT at End Of String AND
-       (braced = *pos == '{', !braced || ++pos < end) && // IF NOT braced OR iterate THEN check IF NOT at End Of String AND
-       (hex_end = pos + num_digits, hex_end < end) && // IF position + number of digits to extract is NOT at End Of String AND
-       std::all_of(pos, hex_end, ::isxdigit) && // all digits are hexadecimal
-       (value = reconstitute_number<16>(pos, hex_end), // read digits
-        pos = hex_end - 1, !braced || (++pos < end && *pos == '}')); // move to end. IF braced THEN check for closing brace
+    auto start = pos;
+    pos += num_digits;
+    if(pos > end || !std::all_of(start, pos, ::isxdigit)) // all digits are hexadecimal
+      throw JSON_ERROR("End Of String found while decoding UTF-16 OR hexadecimal escape sequence");
+    return reconstitute_number<16>(start, pos--);
   }
 
   // Convert 16 bit code point to UTF-8 string.
@@ -84,23 +77,13 @@ namespace shortjson
           switch (*pos)
           {
             // hexadecimal encoded
-            case 'u': // unicode escape symbol \u???? or \u{????}
-            { // value range: 0 to 65535
-              uint32_t code = 0;
-              if(!get_hex_digits(pos, end, 4, code))
-                throw JSON_ERROR("Invalid 16-bit unicode escape sequence");
-              append_utf16(value, code);
+            case 'u': // unicode escape symbol \u???? - value range: 0 to 65535
+              append_utf16(value, get_hex_digits(++pos, end, 4)); // read digits
               break;
-            }
 
-            case 'x': // unicode escape symbol \x?? or \x{??}
-            { // value range: 0 to 255
-              uint32_t code = 0;
-              if(!get_hex_digits(pos, end, 2, code))
-                throw JSON_ERROR("Invalid digit in ASCII escape sequence");
-              value.push_back(char(code));
+            case 'x': // unicode escape symbol \x?? - value range: 0 to 255
+              value.push_back(char(get_hex_digits(++pos, end, 2)));
               break;
-            }
 
             // octal sequence
             case '0': case '1': case '2': case '3':
