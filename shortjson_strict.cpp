@@ -1,3 +1,4 @@
+#ifndef TOLERANT_JSON
 #include "shortjson.h"
 
 #include <algorithm>
@@ -155,26 +156,31 @@ namespace shortjson
     else // numeric value is the only type left
     {
       char* end_point = nullptr;
-      size_t offset;
-      while((offset = value.find('_')) != std::string::npos) // while search for a '_' seperator succeeds
+      size_t offset = 0;
+      while((offset = value.find('_', offset)) != std::string::npos) // while search for a '_' seperator succeeds
         value.erase(offset, 1); // erase the seperator from the copied primitive
 
-      if(std::all_of(value.begin(), value.end(), is_integer)) // if the primitive only uses characters valid in an integer
+      if(*start != '+' && std::all_of(value.begin(), value.end(), is_integer)) // if the primitive only uses characters valid in an integer
       {
         node->type = Field::Integer;
         node->data = std::strtoll(&value.front(), &end_point, 10); // convert
         if(end_point - 1 != &value.back())
-          throw JSON_ERROR("Invalid integer.");
+          throw JSON_ERROR("Invalid integer number.");
       }
-      else if(std::all_of(value.begin(), value.end(), is_float)) // if the primitive only uses characters valid in a float
+      else if(*start != '+' && std::all_of(value.begin(), value.end(), is_float)) // if the primitive only uses characters valid in a float
       {
         node->type = Field::Float;
         node->data = std::strtod(&value.front(), &end_point);
         if(end_point - 1 != &value.back())
-          throw JSON_ERROR("Invalid float.");
+          throw JSON_ERROR("Invalid floating point number.");
       }
       else // Unexpected character for an integer or float primitive.  Maybe it's neither of those.
-        throw JSON_ERROR("Unrecognized primitive type.\nStrict Mode:\n  * Strings must use quotes.\n  * Hexadecimal numbers are invalid.\n  * Boolean and null values must be lowercase.");
+        throw JSON_ERROR("Unrecognized primitive type.\n"
+                         "Strict Mode:\n"
+                         "  * Strings must use quotes.\n"
+                         "  * Hexadecimal numbers are invalid.\n"
+                         "  * Boolean and null values must be lowercase.\n"
+                         "  * Numbers cannot be explicitly positive.");
     }
   }
 
@@ -274,3 +280,4 @@ namespace shortjson
         (output = child.toNumber(), true);
   }
 }
+#endif
