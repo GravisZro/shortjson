@@ -6,8 +6,6 @@
 #include <functional>
 #include <cmath>
 
-#include <iostream>
-
 #define Q2(x) #x
 #define Q1(x) Q2(x)
 #define JSON_ERROR(message) \
@@ -226,9 +224,9 @@ namespace shortjson
 
           case '}': // end of current node
           case ']':
-            lineage.pop();
             if(iter->type == Field::Undefined) // if node is unfilled (can happen with a trailing comma)
               lineage.top()->toArray().erase(iter); // delete the unfilled node
+            lineage.pop();
             iter = lineage.top();
             break;
 

@@ -6,8 +6,6 @@
 #include <functional>
 #include <cmath>
 
-#include <iostream>
-
 #define Q2(x) #x
 #define Q1(x) Q2(x)
 #define JSON_ERROR(message) \
@@ -165,14 +163,14 @@ namespace shortjson
       {
         node->type = Field::Integer;
         node->data = std::strtoll(&value.front(), &end_point, 10); // convert
-        if(end_point != &value.back())
+        if(end_point - 1 != &value.back())
           throw JSON_ERROR("Invalid integer.");
       }
       else if(std::all_of(value.begin(), value.end(), is_float)) // if the primitive only uses characters valid in a float
       {
         node->type = Field::Float;
         node->data = std::strtod(&value.front(), &end_point);
-        if(end_point != &value.back())
+        if(end_point - 1 != &value.back())
           throw JSON_ERROR("Invalid float.");
       }
       else // Unexpected character for an integer or float primitive.  Maybe it's neither of those.
@@ -209,7 +207,7 @@ namespace shortjson
           case '}': // end of current node
           case ']':
             if(iter->type == Field::Undefined) // if node is unfilled (can happen with a trailing comma)
-              throw JSON_ERROR("Trailing commas are not allowed.");
+              lineage.top()->toArray().erase(iter); // delete the unfilled node
             lineage.pop();
             iter = lineage.top();
             break;
@@ -221,7 +219,6 @@ namespace shortjson
 
           case '\'':
             throw JSON_ERROR("Strings must use quotes, not apostrophes.");
-
 
           case ':': // indicates current value is a name
             if(iter->type != Field::String)
