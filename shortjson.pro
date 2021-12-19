@@ -7,12 +7,16 @@ CONFIG += rtti_off
 CONFIG -= app_bundle
 CONFIG -= qt
 
-#DEFINES += TOLERANT_JSON
+CONFIG += tolerant
 
-SOURCES += tests.cpp \
-  shortjson_strict.cpp \
-  shortjson_tolerant.cpp
+SOURCES += tests.cpp
 
+tolerant {
+DEFINES += TOLERANT_JSON
+SOURCES += shortjson_tolerant.cpp
+} else {
+SOURCES += shortjson_strict.cpp
+}
 
 HEADERS += \
   shortjson.h
