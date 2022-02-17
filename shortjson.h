@@ -46,8 +46,11 @@ namespace shortjson
   node_t Parse(const std::string& json_data);
 
   bool FindNode(const node_t& parent, node_t& output, const std::string_view& identifier) noexcept;
+
   bool FindString(const node_t& parent, std::string& output, const std::string_view& identifier) noexcept;
   bool FindNumber(const node_t& parent, intmax_t& output, const std::string_view& identifier) noexcept;
+  bool FindFloat(const node_t& parent, double& output, const std::string_view& identifier) noexcept;
+  bool FindBoolean(const node_t& parent, bool& output, const std::string_view& identifier) noexcept;
 }
 
 #endif // SHORTJSON_H

@@ -279,5 +279,21 @@ namespace shortjson
         child.type == Field::Integer &&
         (output = child.toNumber(), true);
   }
+
+  bool FindFloat(const node_t& parent, double& output, const std::string_view& identifier) noexcept
+  {
+    node_t child;
+    return FindNode(parent, child, identifier) &&
+        child.type == Field::Float &&
+        (output = child.toFloat(), true);
+  }
+
+  bool FindBoolean(const node_t& parent, bool& output, const std::string_view& identifier) noexcept
+  {
+    node_t child;
+    return FindNode(parent, child, identifier) &&
+        child.type == Field::Boolean &&
+        (output = child.toBool(), true);
+  }
 }
 #endif
