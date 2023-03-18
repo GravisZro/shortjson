@@ -5,6 +5,7 @@
 #include <numeric>
 #include <stack>
 #include <functional>
+#include <regex>
 #include <cmath>
 
 #define Q2(x) #x
@@ -16,14 +17,6 @@
 
 namespace shortjson
 {
-  constexpr uint8_t hex_value(char x) noexcept
-    { return x <= '9' ? x - '0' : (10 + ::tolower(x) - 'a'); }
-
-  template <uint32_t base, typename string_iterator> // turns character sequence into a number
-  constexpr uint32_t reconstitute_number(string_iterator& pos,
-                                         const string_iterator& end)
-    { return std::accumulate(pos, end, 0, [](uint32_t t, char x) { return (t * base) + hex_value(x); }); }
-
   // Convert 16 bit code point to UTF-8 string.
   // see Table 3-6 : http://www.unicode.org/versions/Unicode6.2.0/ch03.pdf#page=42
   static void append_utf16(std::string& dest, uint16_t data) noexcept
@@ -65,7 +58,7 @@ namespace shortjson
               pos += 4; // 4 for \u
               if(pos > end || !std::all_of(start, pos, ::isxdigit)) // IF exceeds End Of String OR NOT all digits are hexadecimal
                 throw JSON_ERROR("End Of String found while decoding UTF-16 OR hexadecimal escape sequence");
-              append_utf16(value, reconstitute_number<16>(start, pos--));
+              append_utf16(value, std::stoi(std::string(start, pos--), nullptr, 16));
               break;
             }
 
@@ -112,18 +105,11 @@ namespace shortjson
         x == '}';
   }
 
-  static inline bool is_integer(char x) noexcept
-    { return std::isdigit(x) || x == '-'; }
+  static inline bool is_integer(std::string str) // only accepts base 10 integers
+    { return std::regex_match(str, std::regex( "^(-?0|[1-9][[:digit:]]*)$", std::regex_constants::extended)); }
 
-  static inline bool is_float(char x) noexcept
-  {
-    return std::isdigit(x) ||
-        x == '+' ||
-        x == '-' ||
-        x == 'e' ||
-        x == 'E' ||
-        x == '.';
-  }
+  static inline bool is_float(std::string str) // tolerates uppercase 'E' in scientific notation and values starting with '.'
+    { return std::regex_match(str, std::regex("^-?([[:digit:]]+[.][[:digit:]]*|[.]?[[:digit:]]+)([eE][+-]?[[:digit:]]+)?$", std::regex_constants::extended)); }
 
   template <typename string_iterator>
   static inline void parse_primitive(const std::vector<node_t>::iterator& node,
@@ -156,24 +142,19 @@ namespace shortjson
       node->type = Field::Null;
     else // numeric value is the only type left
     {
-      char* end_point = nullptr;
       size_t offset = 0;
-      while((offset = value.find('_', offset)) != std::string::npos) // while search for a '_' seperator succeeds
+      while((offset = value.find('_', offset)) != std::string::npos) // while "search for a '_' seperator" succeeds
         value.erase(offset, 1); // erase the seperator from the copied primitive
 
-      if(*start != '+' && std::all_of(value.begin(), value.end(), is_integer)) // if the primitive only uses characters valid in an integer
+      if(is_integer(value)) // if the primitive only uses characters valid in an integer
       {
         node->type = Field::Integer;
-        node->data = std::strtoll(&value.front(), &end_point, 10); // convert
-        if(end_point - 1 != &value.back())
-          throw JSON_ERROR("Invalid integer number.");
+        node->data = std::stoll(value, nullptr, 10); // convert
       }
-      else if(*start != '+' && std::all_of(value.begin(), value.end(), is_float)) // if the primitive only uses characters valid in a float
+      else if(is_float(value)) // if the primitive only uses characters valid in a float
       {
         node->type = Field::Float;
-        node->data = std::strtod(&value.front(), &end_point);
-        if(end_point - 1 != &value.back())
-          throw JSON_ERROR("Invalid floating point number.");
+        node->data = std::stod(value); // convert
       }
       else // Unexpected character for an integer or float primitive.  Maybe it's neither of those.
         throw JSON_ERROR("Unrecognized primitive type.\n"

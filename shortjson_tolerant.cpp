@@ -4,6 +4,7 @@
 #include <numeric>
 #include <stack>
 #include <functional>
+#include <regex>
 #include <cmath>
 
 #define Q2(x) #x
@@ -128,23 +129,11 @@ namespace shortjson
         x == '}';
   }
 
-  static inline bool is_integer(char x) noexcept
-  {
-    return std::isxdigit(x) ||
-        x == '+' ||
-        x == '-' ||
-        x == 'x';
-  }
+  static inline bool is_integer(std::string str) // exceptionally tolerant (accepts base 8,10, and 16 values)
+    { return std::regex_match(str, std::regex( "^(0x[[:xdigit:]]+)|([+-]?[[:digit:]]+)$", std::regex_constants::extended)); }
 
-  static inline bool is_float(char x) noexcept
-  {
-    return std::isdigit(x) ||
-        x == '+' ||
-        x == '-' ||
-        x == 'e' ||
-        x == 'E' ||
-        x == '.';
-  }
+  static inline bool is_float(std::string str) // accepts explicitly possitive values
+    { return std::regex_match(str, std::regex("^[+-]?([[:digit:]]+[.][[:digit:]]*|[.]?[[:digit:]]+)([eE][+-]?[[:digit:]]+)?$", std::regex_constants::extended)); }
 
   template <typename string_iterator>
   static inline void parse_primitive(const std::vector<node_t>::iterator& node,
@@ -182,15 +171,15 @@ namespace shortjson
       while((offset = value.find('_')) != std::string::npos) // while search for a '_' seperator succeeds
         value.erase(offset, 1); // erase the seperator from the copied primitive
 
-      if(std::all_of(value.begin(), value.end(), is_integer)) // if the primitive only uses characters valid in an integer
+      if(is_integer(value)) // if the primitive only uses characters valid in an integer
       {
         node->type = Field::Integer;
-        node->data = std::strtoll(&value.front(), nullptr, 0); // convert and detect the base
+        node->data = std::stoll(value, nullptr, 0); // convert and detect the base
       }
-      else if(std::all_of(value.begin(), value.end(), is_float)) // if the primitive only uses characters valid in a float
+      else if(is_float(value)) // if the primitive only uses characters valid in a float
       {
         node->type = Field::Float;
-        node->data = std::strtod(&value.front(), nullptr);
+        node->data = std::stod(value);
       }
       else // Unexpected character for an integer or float primitive.  Maybe it's neither of those.
         throw JSON_ERROR("Unrecognized primitive type. Possibly an unquoted string.");
