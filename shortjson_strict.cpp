@@ -113,7 +113,7 @@ namespace shortjson
   }
 
   static inline bool is_integer(char x) noexcept
-    { return std::isxdigit(x) || x == '-'; }
+    { return std::isdigit(x) || x == '-'; }
 
   static inline bool is_float(char x) noexcept
   {
@@ -121,6 +121,7 @@ namespace shortjson
         x == '+' ||
         x == '-' ||
         x == 'e' ||
+        x == 'E' ||
         x == '.';
   }
 

@@ -142,6 +142,7 @@ namespace shortjson
         x == '+' ||
         x == '-' ||
         x == 'e' ||
+        x == 'E' ||
         x == '.';
   }
 
