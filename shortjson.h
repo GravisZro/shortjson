@@ -27,11 +27,13 @@ namespace shortjson
 
   struct node_t
   {
+    using value_t = std::variant<bool, intmax_t, double, std::string, std::vector<node_t>>;
+
     node_t(void) noexcept : type(Field::Undefined) { }
 
     std::string identifier;
     Field       type;
-    std::variant<bool, intmax_t, double, std::string, std::vector<node_t>> data;
+    value_t     data;
 
     constexpr bool&      toBool  (void) noexcept { return std::get<bool       >(data); }
     constexpr intmax_t&  toNumber(void) noexcept { return std::get<intmax_t   >(data); }
