@@ -40,6 +40,11 @@ namespace shortjson
     constexpr double&    toFloat (void) noexcept { return std::get<double     >(data); }
     inline std::string&  toString(void) noexcept { return std::get<std::string>(data); }
 
+    constexpr const bool&      toBool  (void) const noexcept { return std::get<bool       >(data); }
+    constexpr const intmax_t&  toNumber(void) const noexcept { return std::get<intmax_t   >(data); }
+    constexpr const double&    toFloat (void) const noexcept { return std::get<double     >(data); }
+    inline const std::string&  toString(void) const noexcept { return std::get<std::string>(data); }
+
     inline       std::vector<node_t>& toArray  (void)       noexcept { return std::get<std::vector<node_t>>(data); }
     inline const std::vector<node_t>& toArray  (void) const noexcept { return std::get<std::vector<node_t>>(data); }
 #define toObject toArray // simple alias
