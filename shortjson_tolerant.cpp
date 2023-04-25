@@ -4,7 +4,6 @@
 #include <numeric>
 #include <stack>
 #include <functional>
-#include <regex>
 #include <cmath>
 
 #define Q2(x) #x
@@ -129,11 +128,18 @@ namespace shortjson
         x == '}';
   }
 
-  static inline bool is_integer(std::string str) // exceptionally tolerant (accepts base 8,10, and 16 values)
-    { return std::regex_match(str, std::regex( "^(0x[[:xdigit:]]+)|([+-]?[[:digit:]]+)$", std::regex_constants::extended)); }
-
-  static inline bool is_float(std::string str) // accepts explicitly possitive values
-    { return std::regex_match(str, std::regex("^[+-]?([[:digit:]]+[.][[:digit:]]*|[.]?[[:digit:]]+)([eE][+-]?[[:digit:]]+)?$", std::regex_constants::extended)); }
+  template<typename func_t, typename... Args>
+  bool numeric_convert(const std::string &str, const std::vector<node_t>::iterator& node, Field field_type, func_t function, Args... args)
+  {
+    try
+    {
+      std::size_t pos = 0;
+      node->data = function(str, &pos, args...);
+      node->type = field_type;
+      return str.length() == pos;
+    }
+    catch(...) { return false; }
+  }
 
   template <typename string_iterator>
   static inline void parse_primitive(const std::vector<node_t>::iterator& node,
@@ -171,17 +177,9 @@ namespace shortjson
       while((offset = value.find('_')) != std::string::npos) // while search for a '_' seperator succeeds
         value.erase(offset, 1); // erase the seperator from the copied primitive
 
-      if(is_integer(value)) // if the primitive only uses characters valid in an integer
-      {
-        node->type = Field::Integer;
-        node->data = std::stoll(value, nullptr, 0); // convert and detect the base
-      }
-      else if(is_float(value)) // if the primitive only uses characters valid in a float
-      {
-        node->type = Field::Float;
-        node->data = std::stod(value);
-      }
-      else // Unexpected character for an integer or float primitive.  Maybe it's neither of those.
+      if(!numeric_convert<long long (*)(const std::string&,size_t*,int), int>(value, node, Field::Integer, std::stoll, 0) && // if the primitive only uses characters valid in an integer
+         !numeric_convert<double (*)(const std::string&,size_t*)>(value, node, Field::Float, std::stod))  // if the primitive only uses characters valid in a float
+        // Unexpected character for an integer or float primitive.  Maybe it's neither of those.
         throw JSON_ERROR("Unrecognized primitive type. Possibly an unquoted string.");
     }
   }
